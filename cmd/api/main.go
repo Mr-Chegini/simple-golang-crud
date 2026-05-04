@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/Mr-Chegini/simple-golang-crud/database"
 )
 
 // Response represents a JSON response
@@ -55,6 +57,17 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
+	// Initialize database
+	if err := database.InitDB(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer database.CloseDB()
+
+	// Run database migrations
+	if err := database.RunMigrations(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	mux := http.NewServeMux()
 
 	// Health check endpoint
