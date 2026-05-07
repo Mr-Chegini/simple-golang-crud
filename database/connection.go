@@ -1,52 +1,40 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
-	"os"
-	// _ "github.com/mattn/go-sqlite3" // Commented out due to network issues
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-// DB holds the database connection
-// var DB *sql.DB // Commented out for simulated database
+// DB is the global database instance
+var DB *gorm.DB
 
-// InitDB initializes the database connection
+// InitDB initializes the database connection using GORM + SQLite
 func InitDB() error {
-	// For now, we'll create a simple file-based approach
-	// In a real application, you'd use a proper database driver
+	var err error
 
-	// Create database directory if it doesn't exist
-	if err := os.MkdirAll("database", 0755); err != nil {
-		return fmt.Errorf("failed to create database directory: %v", err)
-	}
-
-	// Create a simple database file to indicate it's initialized
-	dbFile := "./database/app.db"
-	file, err := os.OpenFile(dbFile, os.O_CREATE|os.O_RDWR, 0644)
+	// Connect to SQLite database
+	DB, err = gorm.Open(sqlite.Open("database/app.db"), &gorm.Config{})
 	if err != nil {
-		return fmt.Errorf("failed to create database file: %v", err)
+		return fmt.Errorf("failed to connect to database: %v", err)
 	}
-	file.Close()
 
-	// For now, we'll simulate a database connection
-	// In production, replace this with actual database driver
-	log.Println("✅ Database file created successfully (simulated connection)")
-	log.Println("📝 Note: Using simulated database due to network connectivity issues")
-	log.Println("📝 To use real SQLite, run: go get github.com/mattn/go-sqlite3")
-
+	log.Println("✅ Database connection established successfully")
 	return nil
 }
 
 // CloseDB closes the database connection
 func CloseDB() error {
-	// For now, nothing to close
-	log.Println("✅ Database connection closed (simulated)")
-	return nil
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get database instance: %v", err)
+	}
+	return sqlDB.Close()
 }
 
-// GetDB returns the database connection
-func GetDB() *sql.DB {
-	// return DB // Commented out for simulated database
-	return nil
+// GetDB returns the global database instance
+func GetDB() *gorm.DB {
+	return DB
 }
