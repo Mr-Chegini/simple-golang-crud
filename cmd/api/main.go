@@ -4,6 +4,9 @@ import (
 	"log"
 
 	"github.com/Mr-Chegini/simple-golang-crud/database"
+	"github.com/Mr-Chegini/simple-golang-crud/handler"
+	"github.com/Mr-Chegini/simple-golang-crud/repository"
+	"github.com/Mr-Chegini/simple-golang-crud/service"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,12 +21,26 @@ func main() {
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer database.CloseDB()
+	defer func() {
+		if err := database.CloseDB(); err != nil {
+			log.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	// Run database migrations
 	if err := database.RunMigrations(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
+
+	// Build repositories and services
+	userRepo := repository.NewUserRepository(database.GetDB())
+	productRepo := repository.NewProductRepository(database.GetDB())
+
+	userService := service.NewUserService(userRepo)
+	productService := service.NewProductService(productRepo, userRepo)
+
+	userHandler := handler.NewUserHandler(userService)
+	productHandler := handler.NewProductHandler(productService)
 
 	app := fiber.New()
 
@@ -45,26 +62,23 @@ func main() {
 		return c.Next()
 	})
 
+	api := app.Group("/api/v1")
+
+	api.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(Response{
+			Message: "Welcome to Simple Go CRUD API",
+			Version: "v1",
+		})
+	})
+
+	userHandler.RegisterRoutes(api)
+	productHandler.RegisterRoutes(api)
+
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(Response{
 			Status:  "ok",
 			Message: "Simple Go CRUD API is running",
-		})
-	})
-
-	// API root
-	app.Get("/api/v1", func(c *fiber.Ctx) error {
-		return c.JSON(Response{
-			Message: "Welcome to Simple Go CRUD API",
-			Version: "v1",
-		})
-	})
-
-	app.Get("/api/v1/", func(c *fiber.Ctx) error {
-		return c.JSON(Response{
-			Message: "Welcome to Simple Go CRUD API",
-			Version: "v1",
 		})
 	})
 
